@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# echo $0
+#source $(dirname $0)/lib/test
+
+#echo $VAR1
+
+BASE_URL="https://api.mailmesh.cloud"
+
+request () {
+    resource=$1
+    curl \
+        --silent \
+        --location "$BASE_URL/$resource" \
+        "$@"
+}
