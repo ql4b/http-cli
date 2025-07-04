@@ -1,16 +1,412 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# echo $0
-#source $(dirname $0)/lib/test
+# strict mode
+set -euo pipefail
 
-#echo $VAR1
+# global vars
+BODY=""
+ENGINE="curl"
+FULL_URL=""
+HTTP_METHOD="GET"
+USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/370.10 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/370.10"
+TIMEOUT=10
+VERBOSE=0
+declare -a ENGINE_FLAGS=(--silent --show-error)
+declare -a HEADERS=()
+declare -a PROXY=()
 
-BASE_URL="https://api.mailmesh.cloud"
+# load custom vars
+if [[ -f "${HOME}/.http-cli.conf" ]]; then
+  # shellcheck source=/dev/null
+  source "${HOME}/.http-cli.conf"
+fi
 
-request () {
-    resource=$1
-    curl \
-        --silent \
-        --location "$BASE_URL/$resource" \
-        "$@"
+# shows the message and exits the program
+function die() {
+  echo "$@" 1>&2
+  exit 1
 }
+
+# usage
+function usage() {
+  cat <<EOF
+Usage: $0 [options] --url URL
+
+Options:
+  -u, --url url             Target URL (required)
+  -m, --method method       HTTP method (default: GET)
+  -H, --header header       Custom header (file, comma-separated or multiple --header)
+  -A, --user-agent UA       Custom User-Agent
+  -b, --cookie data         Pass data to the HTTP server (string, file or multiple --cookie)
+  -c, --cookie-jar file     Write all cookies to a file
+  -d, --data data           Request body (string or @file)
+  -D, --dump-header file    Dump headers info
+                            file=all, file=- or emtpy shows full headers (default)
+                            file=code shows HTTP codes only
+  -x, --proxy proxy         Proxy URL
+  -t, --timeout timeout     Request timeout (default: 10)
+  -e, --engine engine       HTTP engine (default: curl)
+  -o, --output file         Save response to file
+  -s, --silent              Silent mode (default)
+  -v, --verbose             Verbose mode
+  -h, --help                Show this help
+  --                        Use engine flags after --
+EOF
+}
+
+# log
+function log()  {
+  if ((VERBOSE)); then
+    echo "debug: $*"
+  fi
+}
+
+# add engine flag
+function add_engine_flag() {
+  if (($#)); then
+    ENGINE_FLAGS+=("$@")
+    log "add engine flag => $*"
+  fi
+}
+
+# del engine flag
+function del_engine_flag() {
+  local flag idx
+  for flag in "$@"; do
+    for idx in "${!ENGINE_FLAGS[@]}"; do
+      if [[ "${ENGINE_FLAGS[idx]}" == "$flag" ]]; then
+        unset 'ENGINE_FLAGS[idx]'
+        log "del engine flag => $flag"
+      fi
+    done
+  done
+}
+
+# headers
+function add_header() {
+  local header="$1"
+  if [[ -n "$header" ]]; then
+    HEADERS+=("--header" "$header")
+    log "add header => $header"
+  fi
+}
+
+# ensure argument
+function ensure_arg() {
+  if (($# < 2)) || [[ "$2" == -* ]]; then
+    die "Error: $1 needs an argument"
+  fi
+}
+
+# ensure header
+function ensure_header() {
+  local wanted="$1" idx
+  for ((idx = 1; idx < ${#HEADERS[@]}; idx += 2)); do
+    if [[ "${HEADERS[idx]}" == "${wanted}" ]]; then
+      return
+    fi
+  done
+  log "ensure header => $wanted"
+  add_header "$wanted"
+}
+
+# request
+function request() {
+  local url="$1" method="${2:-$HTTP_METHOD}" ret=""
+  local -a cmd=(
+    "$ENGINE"
+    "--user-agent" "$USER_AGENT"
+    "--max-time" "$TIMEOUT"
+    "--request" "$method"
+  )
+  [[ "$method" =~ ^(DELETE|PATCH|POST|PUT)$ ]] && cmd+=("--data" "$BODY")
+  ((${#HEADERS[@]})) && cmd+=("${HEADERS[@]}")
+  ((${#PROXY[@]})) && cmd+=("${PROXY[@]}")
+  ((${#ENGINE_FLAGS[@]})) && cmd+=("${ENGINE_FLAGS[@]}")
+  cmd+=(--url "$url")
+  log "cmd => ${cmd[*]}"
+  "${cmd[@]}"
+  ret=$?
+  log "$ENGINE exited with code $ret"
+  return $ret
+}
+
+# cookie
+function set_cookie() {
+  add_engine_flag --cookie "$1"
+  log "set cookie $1"
+}
+
+# cookie jar
+function set_cookie_jar() {
+  if [[ "$1" == "-" ]]; then
+    add_engine_flag --output /dev/null --cookie-jar -
+  else
+    add_engine_flag --cookie-jar "$1"
+  fi
+  log "set cookie jar $1"
+}
+
+# data
+function set_data() {
+  local data="$1"
+  case "$data" in
+    # file
+    @*)
+      [[ ! -f "${data:1}" ]] && die "Error: file '${data:1}' not found"
+      BODY="$data"
+      log "body is a file => $BODY"
+      ;;
+    # json
+    '{'* | '['*)
+      BODY="$data"
+      ensure_header "Content-Type: application/json"
+      log "body is a json => $BODY"
+      ;;
+    # key-value
+    *=*)
+      BODY="$data"
+      ensure_header "Content-Type: application/x-www-form-urlencoded"
+      log "body is key=value => $BODY"
+      ;;
+    *)
+      BODY="$data"
+      log "body is raw string => $BODY"
+      ;;
+  esac
+}
+
+# dump header
+function set_dump_header() {
+  local file="$1"
+  if [[ "$file" == "all" || "$file" == "-" ]]; then
+    add_engine_flag --output /dev/null --dump-header -
+  elif [[ "$file" == "code" ]]; then
+    add_engine_flag --output /dev/null --write-out $'proxy=%{http_connect}\\nserver=%{http_code}\\n'
+  else
+    add_engine_flag --dump-header "$file"
+  fi
+  log "set dump header => $file"
+}
+
+# method
+function set_method() {
+  HTTP_METHOD=$(echo "$1" | tr "[:lower:]" "[:upper:]")
+  log "set http method => $HTTP_METHOD"
+}
+
+# proxy
+function set_proxy() {
+  local proxy="$1"
+  if [[ -n "$proxy" ]]; then
+    PROXY+=("--proxy" "$proxy")
+    log "set proxy => $proxy"
+  fi
+}
+
+# engine
+function set_engine() {
+  local prg="$1"
+  ENGINE=$(command -v "$prg" 2>/dev/null) || die "Error: engine '$prg' not found in PATH"
+  log "set engine => $ENGINE"
+}
+
+# url
+function set_full_url() {
+  FULL_URL="$1"
+  log "set target url => $FULL_URL"
+}
+
+# output
+function set_output() {
+  local file="$1"
+  add_engine_flag --output "$file"
+  log "set output => $file"
+}
+
+# silent mode
+function set_silent() {
+  set_verbose 0
+  del_engine_flag --verbose --silent --show-error
+  add_engine_flag --silent --show-error
+  log "set silent => true"
+}
+
+# timeout
+function set_timeout() {
+  local num="$1"
+  if ! [[ "$num" =~ ^[0-9]+$ ]]; then
+    die "Error: invalid timeout: $num"
+  fi
+  TIMEOUT="$num"
+  log "set timeout => $TIMEOUT"
+}
+
+# user-agent (UA)
+function set_user_agent() {
+  USER_AGENT="$1"
+  log "set user agent => $USER_AGENT"
+}
+
+# verbose mode
+function set_verbose() {
+  VERBOSE="$1"
+  if ((VERBOSE)); then
+    del_engine_flag --silent --show-error --verbose
+    add_engine_flag --verbose
+    log "set verbose => $VERBOSE"
+  fi
+}
+
+# show usage if no arguments supplied
+if ((!$#)); then
+  die "$(usage)"
+fi
+
+# pre parse args
+function pre_parse_args() {
+  local arg
+  for arg in "$@"; do
+    case $arg in
+      -s|--silent)
+        set_silent
+        ;;
+      -v|--verbose)
+        set_verbose 1
+        ;;
+      --)
+        break
+        ;;
+    esac
+  done
+}
+
+# parse args
+function parse_args() {
+  while (($#)); do
+    case "$1" in
+      -A|--user-agent)
+        ensure_arg "$1" "$2"
+        set_user_agent "$2"
+        shift 2
+        ;;
+      -b|--cookie)
+        ensure_arg "$1" "$2"
+        set_cookie "$2"
+        shift 2
+        ;;
+      -c|--cookie-jar)
+        [[ -z "${2-}" ]] && die "Error: $1 needs an argument"
+        if [[ "$2" == "-" ]]; then
+          set_cookie_jar "-"
+        else
+          ensure_arg "$1" "$2"
+          set_cookie_jar "$2"
+        fi
+        shift 2
+        ;;
+      -d|--data)
+        ensure_arg "$1" "$2"
+        set_data "$2"
+        shift 2
+        ;;
+      -D|--dump-header)
+        local mode="all" arg="${2-}"
+        if [[ "$arg" == "-" ]]; then
+          mode="-"
+          shift
+        elif (($# > 1)) && [[ "$arg" != -* ]]; then
+          mode="$arg"
+          shift
+        fi
+        set_dump_header "$mode"
+        shift
+        ;;
+      -e|--engine)
+        ensure_arg "$1" "$2"
+        set_engine "$2"
+        shift 2
+        ;;
+      -H|--header)
+        ensure_arg "$1" "$2"
+        if [[ -f "$2" ]]; then
+          while IFS= read -r item; do
+            add_header "$item"
+          done < "$2"
+        else
+          IFS=',' read -ra items <<< "$2"
+          for item in "${items[@]}"; do
+            add_header "$item"
+          done
+        fi
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -m|--method)
+        ensure_arg "$1" "$2"
+        set_method "$2"
+        shift 2
+        ;;
+      -o|--output)
+        ensure_arg "$1" "$2"
+        set_output "$2"
+        shift 2
+        ;;
+      -x|--proxy)
+        ensure_arg "$1" "$2"
+        set_proxy "$2"
+        shift 2
+        ;;
+      -u|--url)
+        ensure_arg "$1" "$2"
+        set_full_url "$2"
+        shift 2
+        ;;
+      -t|--timeout)
+        ensure_arg "$1" "$2"
+        set_timeout "$2"
+        shift 2
+        ;;
+      -s|--silent)
+        # see pre_parse_args
+        shift
+        ;;
+      -v|--verbose)
+        # see pre_parse_args
+        shift
+        ;;
+      --)
+        shift
+        add_engine_flag "$@"
+        break
+        ;;
+      http://*|https://*)
+        if [[ -z "$FULL_URL" ]]; then
+          set_full_url "$1"
+        else
+          die "Error: multiple URLs supplied"
+        fi
+        shift
+        ;;
+      *)
+        die "Error: invalid option: $1"
+        ;;
+    esac
+ done
+}
+
+# main
+function main() {
+  pre_parse_args "$@"
+  parse_args "$@"
+  if [[ -z "$FULL_URL" ]]; then
+    die "Error: --url is required"
+  fi
+  request "$FULL_URL"
+  exit $?
+}
+
+main "$@"
