@@ -8,6 +8,7 @@ BODY=""
 ENGINE="curl"
 FULL_URL=""
 HTTP_METHOD="GET"
+SET_HTTP_METHOD=0
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/370.10 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/370.10"
 TIMEOUT=10
 VERBOSE=0
@@ -192,6 +193,7 @@ function set_dump_header() {
 # method
 function set_method() {
   HTTP_METHOD=$(echo "$1" | tr "[:lower:]" "[:upper:]")
+  SET_HTTP_METHOD=1
   log "set http method => $HTTP_METHOD"
 }
 
@@ -404,6 +406,9 @@ function main() {
   parse_args "$@"
   if [[ -z "$FULL_URL" ]]; then
     die "Error: --url is required"
+  fi
+  if [[ -n "$BODY" && "$HTTP_METHOD" != "POST" ]] && ((!SET_HTTP_METHOD)); then
+    set_method "POST"
   fi
   request "$FULL_URL"
   exit $?
