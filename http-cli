@@ -36,14 +36,13 @@ Usage: $0 [options] --url URL
 Options:
   -u, --url url             Target URL (required)
   -m, --method method       HTTP method (default: GET)
-  -H, --header header       Custom header (file, comma-separated or multiple --header)
+  -H, --header header       Custom header (file or multiple --header)
   -A, --user-agent UA       Custom User-Agent
   -b, --cookie data         Pass data to the HTTP server (string, file or multiple --cookie)
   -c, --cookie-jar file     Write all cookies to a file
   -d, --data data           Request body (string or @file)
-  -D, --dump-header file    Dump headers info
-                            file=all, file=- or emtpy shows full headers (default)
-                            file=code shows HTTP codes only
+  -D, --dump-header file    Dump headers info (file=- or emtpy shows full headers)
+  -Z, --status-codes        Status codes (proxy + server, HTTP only)
   -x, --proxy proxy         Proxy URL
   -t, --timeout timeout     Request timeout (default: 10)
   -e, --engine engine       HTTP engine (default: curl)
@@ -180,10 +179,8 @@ function set_data() {
 # dump header
 function set_dump_header() {
   local file="$1"
-  if [[ "$file" == "all" || "$file" == "-" ]]; then
+  if [[ "$file" == "-" ]]; then
     add_engine_flag --dump-header -
-  elif [[ "$file" == "code" ]]; then
-    add_engine_flag --write-out $'\\nproxy=%{http_connect}\\nserver=%{http_code}\\n'
   else
     add_engine_flag --dump-header "$file"
   fi
@@ -204,6 +201,12 @@ function set_proxy() {
     PROXY+=("--proxy" "$proxy")
     log "set proxy => $proxy"
   fi
+}
+
+# status codes
+function set_status_codes() {
+  add_engine_flag --write-out $'\n{"http_cli_status_codes":{"proxy":%{http_connect},"server":%{http_code}}}\n'
+  log "set status codes"
 }
 
 # engine
@@ -313,7 +316,7 @@ function parse_args() {
         shift 2
         ;;
       -D|--dump-header)
-        local mode="all" arg="${2-}"
+        local mode="-" arg="${2-}"
         if [[ "$arg" == "-" ]]; then
           mode="-"
           shift
@@ -336,10 +339,7 @@ function parse_args() {
             add_header "$item"
           done < "$2"
         else
-          IFS=',' read -ra items <<< "$2"
-          for item in "${items[@]}"; do
-            add_header "$item"
-          done
+          add_header "$2"
         fi
         shift 2
         ;;
@@ -361,6 +361,10 @@ function parse_args() {
         ensure_arg "$1" "$2"
         set_proxy "$2"
         shift 2
+        ;;
+      -Z|--status-codes)
+        set_status_codes
+        shift
         ;;
       -u|--url)
         ensure_arg "$1" "$2"
