@@ -181,9 +181,9 @@ function set_data() {
 function set_dump_header() {
   local file="$1"
   if [[ "$file" == "all" || "$file" == "-" ]]; then
-    add_engine_flag --output /dev/null --dump-header -
+    add_engine_flag --dump-header -
   elif [[ "$file" == "code" ]]; then
-    add_engine_flag --output /dev/null --write-out $'proxy=%{http_connect}\\nserver=%{http_code}\\n'
+    add_engine_flag --write-out $'\\nproxy=%{http_connect}\\nserver=%{http_code}\\n'
   else
     add_engine_flag --dump-header "$file"
   fi
