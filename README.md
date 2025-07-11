@@ -25,7 +25,7 @@ http-cli --user-agent "http-cli/0.1 (https://github.com/ql4b/http-cli)" \
 ```
 
 ```bash
-http-cli --dump-header code \
+http-cli --dump-header - --status-codes \
     https://httpbin.org/status/204
 ```
 
