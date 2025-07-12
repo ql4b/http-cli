@@ -43,3 +43,15 @@ You can define default settings in `~/.http-cli.conf`:
 USER_AGENT="http-cli/0.1 (https://github.com/ql4b/http-cli)"
 TIMEOUT=10
 ```
+
+## Release Strategy
+
+This project uses [semantic-release](https://semantic-release.gitbook.io/) to automate versioning and changelog generation.
+
+- Commits to `main` trigger **stable releases** (e.g. `v1.2.3`)
+- Commits to `develop` trigger **prereleases** (e.g. `v1.3.0-beta.1`)
+
+Releases are based on [Conventional Commits](https://www.conventionalcommits.org/), so use commit messages like:
+- `feat: add new feature`
+- `fix: correct bug`
+- `chore: update metadata`
