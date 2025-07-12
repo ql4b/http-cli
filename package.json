@@ -1,0 +1,57 @@
+{
+  "name": "http-cli",
+  "version": "0.0.0-development",
+  "description": "A shell script that acts like a teammate — Bash-based HTTP client built around curl.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ql4b/http-cli.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.0.6",
+    "conventional-changelog-cli": "^5.0.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "conventional-changelog-preset-loader": "^5.0.0",
+    "conventional-changelog-writer": "^8.2.0",
+    "semantic-release": "^v24.2.7"
+  },
+  "release": {
+    "changelogFile": "CHANGELOG.md",
+    "presetConfig": {
+      "ignoreMergeCommits": true
+    },
+    "branches": [
+      "main",
+      {
+        "name": "develop",
+        "prerelease": true
+      }
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "writerOpts": {
+            "transform": {
+              "date": "YYYY-MM-DD"
+            }
+          }
+        }
+      ],
+      "@semantic-release/changelog",
+      "@semantic-release/git",
+      "@semantic-release/github"
+    ],
+    "preset": "conventionalcommits",
+    "tagFormat": "v${version}"
+  }
+}
