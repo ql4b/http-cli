@@ -1,3 +1,4 @@
+
 # http-cli
 
 A shell script that acts like a teammate.
@@ -49,9 +50,44 @@ TIMEOUT=10
 This project uses [semantic-release](https://semantic-release.gitbook.io/) to automate versioning and changelog generation.
 
 - Commits to `main` trigger **stable releases** (e.g. `v1.2.3`)
-- Commits to `develop` trigger **prereleases** (e.g. `v1.3.0-beta.1`)
 
 Releases are based on [Conventional Commits](https://www.conventionalcommits.org/), so use commit messages like:
 - `feat: add new feature`
 - `fix: correct bug`
 - `chore: update metadata`
+
+## Development Workflow
+
+Start from `develop` your feature branch as in 
+
+```
+git checkout -b feat/something origin/develop
+```
+
+Make your changes and any commit to the feature branch as you wish.
+
+When you are ready to promote your changes to develop, from your local branch:
+
+```
+git switch develop
+git pull origin develop
+git switch feat/something
+git rebase -i develop
+```
+
+Add you fixups and edit the first commit message in a way that it represents your PR intent (`chore:`, `fix:`, `feat:` etc). 
+
+Now you push your feature branch and create the PR
+
+```
+git push --force-with-lease origin HEAD
+```
+
+Once your PR is reviewed or you consider it ok to merge anyway: 
+
+```
+git push origin <COMMIT_HASH>:develop
+```
+or use GitHub web interface and  "SQUASH AND MERGE"
+
+
