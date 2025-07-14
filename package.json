@@ -29,11 +29,7 @@
       "ignoreMergeCommits": true
     },
     "branches": [
-      "main",
-      {
-        "name": "develop",
-        "prerelease": true
-      }
+      "main"
     ],
     "plugins": [
       "@semantic-release/commit-analyzer",
