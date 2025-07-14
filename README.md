@@ -77,7 +77,7 @@ git rebase -i develop
 
 Add you fixups and edit the first commit message in a way that it represents your PR intent (`chore:`, `fix:`, `feat:` etc). 
 
-Now you push your feature branch and create the PR
+Now you push your feature branch and create the PR against `develop`
 
 ```
 git push --force-with-lease origin HEAD
@@ -89,5 +89,10 @@ Once your PR is reviewed or you consider it ok to merge anyway:
 git push origin <COMMIT_HASH>:develop
 ```
 or use GitHub web interface and  "SQUASH AND MERGE"
+
+## Release Workflow
+
+To publish a new release open a PR from `develop` to `main` and wait for a review before merge. 
+
 
 
