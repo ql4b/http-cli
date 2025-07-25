@@ -58,41 +58,32 @@ Releases are based on [Conventional Commits](https://www.conventionalcommits.org
 
 ## Development Workflow
 
-Start from `develop` your feature branch as in 
+Start from `main` your feature branch as in
 
 ```
-git checkout -b feat/something origin/develop
+git fetch origin
+git switch -c feat/something origin/main
 ```
 
 Make your changes and any commit to the feature branch as you wish.
 
-When you are ready to promote your changes to develop, from your local branch:
+When you are ready to promote your changes to main, from your local branch:
 
 ```
-git switch develop
-git pull origin develop
+git switch main
+git pull --rebase origin main
 git switch feat/something
-git rebase -i develop
+git rebase -i main
 ```
 
-Add you fixups and edit the first commit message in a way that it represents your PR intent (`chore:`, `fix:`, `feat:` etc). 
+Add you fixups and edit the first commit message in a way that it represents your PR intent (`chore:`, `fix:`, `feat:` etc).
 
-Now you push your feature branch and create the PR against `develop`
-
-```
-git push --force-with-lease origin HEAD
-```
-
-Once your PR is reviewed or you consider it ok to merge anyway: 
+Now you push your feature branch and create the PR against `main`
 
 ```
-git push origin <COMMIT_HASH>:develop
+git push -u origin feat/something
 ```
-or use GitHub web interface and  "SQUASH AND MERGE"
 
 ## Release Workflow
 
-To publish a new release open a PR from `develop` to `main` and wait for a review before merge. 
-
-
-
+To publish your changes open a PR and wait for a review before merge.

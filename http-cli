@@ -10,7 +10,7 @@ FULL_URL=""
 HTTP_METHOD="GET"
 SET_HTTP_METHOD=0
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/370.10 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/370.10"
-TIMEOUT=10
+TIMEOUT=30
 VERBOSE=0
 declare -a ENGINE_FLAGS=(--silent --show-error)
 declare -a HEADERS=()
@@ -44,7 +44,7 @@ Options:
   -D, --dump-header file    Dump headers info (file=- or emtpy shows full headers)
   -Z, --status-codes        Status codes (proxy + server, HTTP only)
   -x, --proxy proxy         Proxy URL
-  -t, --timeout timeout     Request timeout (default: 10)
+  -t, --timeout timeout     Request timeout (default: 30)
   -e, --engine engine       HTTP engine (default: curl)
   -o, --output file         Save response to file
   -s, --silent              Silent mode (default)
