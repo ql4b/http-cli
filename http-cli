@@ -42,6 +42,7 @@ Options:
   -c, --cookie-jar file     Write all cookies to a file
   -d, --data data           Request body (string or @file)
   -D, --dump-header file    Dump headers info (file=- or emtpy shows full headers)
+  -L, --location            Follow HTTP redirects
   -Z, --status-codes        Status codes (proxy + server, HTTP only)
   -x, --proxy proxy         Proxy URL
   -t, --timeout timeout     Request timeout (default: 30)
@@ -185,6 +186,12 @@ function set_dump_header() {
     add_engine_flag --dump-header "$file"
   fi
   log "set dump header => $file"
+}
+
+# location
+function set_location() {
+  add_engine_flag --location
+  log "set location"
 }
 
 # method
@@ -346,6 +353,10 @@ function parse_args() {
       -h|--help)
         usage
         exit 0
+        ;;
+      -L|--location)
+        set_location
+        shift
         ;;
       -m|--method)
         ensure_arg "$1" "$2"
