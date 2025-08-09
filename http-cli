@@ -270,11 +270,6 @@ function set_verbose() {
   fi
 }
 
-# show usage if no arguments supplied
-if ((!$#)); then
-  die "$(usage)"
-fi
-
 # pre parse args
 function pre_parse_args() {
   local arg
@@ -417,6 +412,9 @@ function parse_args() {
 
 # main
 function main() {
+  if ((!$#)); then
+    die "$(usage)"
+  fi
   pre_parse_args "$@"
   parse_args "$@"
   if [[ -z "$FULL_URL" ]]; then
