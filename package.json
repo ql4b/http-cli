@@ -15,12 +15,12 @@
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/github": "^9.0.6",
+    "@semantic-release/github": "^12.0.9",
     "conventional-changelog-cli": "^5.0.0",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "conventional-changelog-preset-loader": "^5.0.0",
     "conventional-changelog-writer": "^8.2.0",
-    "semantic-release": "^v24.2.7"
+    "semantic-release": "^25.0.9"
   },
   "release": {
     "changelogFile": "CHANGELOG.md",
